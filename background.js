@@ -96,10 +96,22 @@ async function runCommandOnPdf(config, pdfPath) {
   if (!config.command || !config.command.trim()) {
     throw new Error("No command line tool configured. Open the add-on's options page to set one.");
   }
-  const response = await browser.runtime.sendNativeMessage(NATIVE_HOST, {
-    command: config.command,
-    pdf: pdfPath
-  });
+  let response;
+  try {
+    response = await browser.runtime.sendNativeMessage(NATIVE_HOST, {
+      command: config.command,
+      pdf: pdfPath
+    });
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    if (msg.indexOf("No such native application") !== -1) {
+      throw new Error(
+        "The native messaging host '" + NATIVE_HOST + "' is not installed. " +
+        "Run host/install.sh from the extension folder (see README.md, 'Native messaging host setup')."
+      );
+    }
+    throw new Error("Running the command line tool failed: " + msg);
+  }
   if (!response || !response.ok) {
     const detail = response && response.error ? response.error : "the native messaging host did not respond";
     throw new Error("Running the command line tool failed: " + detail);

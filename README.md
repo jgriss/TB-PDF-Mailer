@@ -39,6 +39,18 @@ Open Add-on Manager → PDF Mailer → Preferences and set:
 
 ## Native messaging host setup
 
+The easiest way on Linux/macOS is the bundled installer:
+
+```sh
+host/install.sh
+```
+
+It copies `host/pdf_tool_host.py` to `~/.local/bin/pdf_tool_host.py` and
+registers the host manifest in the correct NativeMessagingHosts directory.
+Set `PDF_TOOL_HOST_BIN` to install the script somewhere else.
+
+Manual setup:
+
 1. Copy `host/pdf_tool_host.py` to e.g. `/usr/local/bin/pdf_tool_host.py` and
    make it executable (`chmod +x`).
 2. Copy `host/com.example.pdftool.json` to the Thunderbird native messaging
