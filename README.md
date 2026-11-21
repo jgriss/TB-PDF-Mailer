@@ -19,10 +19,12 @@ Open Add-on Manager → PDF Mailer → Preferences and set:
 - **Subject of the new email**.
 - **Save location** — subfolder of your Downloads folder for the PDF
   (default: `pdf-mailer`).
-- **Command line tool** — command executed on the saved PDF;
-  `{pdf}` is replaced with the shell-quoted file path
-  (e.g. `pdf-stamp {pdf} -o {pdf}`). The file at `{pdf}` after the command
-  finishes is used as the adapted PDF.
+- **Command line tool** — command executed on the saved PDF. Two
+  placeholders are supported: `{pdf}` is replaced with the shell-quoted
+  **input** PDF path and `{out}` with the shell-quoted **output** PDF path
+  (e.g. `pdf-stamp {pdf} -o {out}`). The file written to `{out}` is attached
+  to the new email; if the command does not write to `{out}`, the input file
+  at `{pdf}` after the command finishes is used instead.
 
 ## How it works
 
@@ -62,9 +64,11 @@ Manual setup:
      with the JSON file path as default value.
 
 The host speaks the standard native messaging protocol: it reads
-`{"command": "...", "pdf": "/abs/path.pdf"}` from stdin, substitutes `{pdf}`,
-runs the command with the shell, and returns
+`{"command": "...", "pdf": "/abs/in.pdf", "out": "/abs/out.pdf"}` from stdin,
+substitutes `{pdf}` and `{out}`, runs the command with the shell, and returns
 `{"ok": true, "data": "<base64 adapted PDF>"}` (or `{"ok": false, "error": ...}`).
+The adapted PDF is read from `{out}` if the command wrote it there, otherwise
+from `{pdf}`.
 
 ## Install (development)
 

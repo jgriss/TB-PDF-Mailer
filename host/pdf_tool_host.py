@@ -4,20 +4,23 @@
 Reads one JSON message from stdin (native messaging framing: 4-byte
 little-endian length + UTF-8 JSON) of the form:
 
-    {"command": "pdf-stamp {pdf} -o {pdf}", "pdf": "/abs/path/file.pdf"}
+    {"command": "pdf-stamp {pdf} -o {out}", "pdf": "/abs/in.pdf", "out": "/abs/out.pdf"}
 
-Replaces the {pdf} placeholder with the shell-quoted PDF path, runs the
-command, then reads the (possibly modified) PDF back and answers with:
+Replaces the {pdf} placeholder with the shell-quoted input PDF path and the
+{out} placeholder with the shell-quoted output PDF path, runs the command,
+then reads the output PDF ({out}) back and answers with:
 
     {"ok": true, "data": "<base64 of the adapted PDF>", "stdout": "...", "stderr": "..."}
 
-or, on failure:
+If the command did not write to {out} (e.g. it only uses {pdf} and modifies
+the input in place), the input file is read back instead. On failure:
 
     {"ok": false, "error": "..."}
 """
 
 import base64
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -38,11 +41,14 @@ def write_message(stream, payload):
     stream.flush()
 
 
-def build_command(template, pdf_path):
-    quoted = shlex.quote(pdf_path)
-    command = template.replace("{pdf}", quoted).replace("%PDF%", quoted)
-    if command == template and "{pdf}" not in template and "%PDF%" not in template:
-        command = command + " " + quoted
+def build_command(template, pdf_path, out_path):
+    quoted_in = shlex.quote(pdf_path)
+    quoted_out = shlex.quote(out_path)
+    command = (template
+               .replace("{out}", quoted_out).replace("%OUT%", quoted_out)
+               .replace("{pdf}", quoted_in).replace("%PDF%", quoted_in))
+    if "{pdf}" not in template and "%PDF%" not in template and "{out}" not in template and "%OUT%" not in template:
+        command = command + " " + quoted_in
     return command
 
 
@@ -52,9 +58,10 @@ def main():
         if not message:
             write_message(sys.stdout.buffer, {"ok": False, "error": "no input message"})
             return
-        command = build_command(str(message.get("command", "")), str(message.get("pdf", "")))
+        command = build_command(str(message.get("command", "")), str(message.get("pdf", "")), str(message.get("out", "")))
         proc = subprocess.run(command, shell=True, capture_output=True, text=True)
-        with open(message["pdf"], "rb") as handle:
+        result_path = message.get("out") if message.get("out") and os.path.exists(message["out"]) else message["pdf"]
+        with open(result_path, "rb") as handle:
             data = base64.b64encode(handle.read()).decode("ascii")
         if proc.returncode != 0:
             write_message(sys.stdout.buffer, {

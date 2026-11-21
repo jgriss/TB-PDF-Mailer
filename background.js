@@ -92,15 +92,21 @@ async function savePdf(file, config, fileName) {
   return items[0].filename;
 }
 
+function outputPdfPath(pdfPath) {
+  return pdfPath.replace(/\.pdf$/i, "") + "-adapted.pdf";
+}
+
 async function runCommandOnPdf(config, pdfPath) {
   if (!config.command || !config.command.trim()) {
     throw new Error("No command line tool configured. Open the add-on's options page to set one.");
   }
+  const outPath = outputPdfPath(pdfPath);
   let response;
   try {
     response = await browser.runtime.sendNativeMessage(NATIVE_HOST, {
       command: config.command,
-      pdf: pdfPath
+      pdf: pdfPath,
+      out: outPath
     });
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
