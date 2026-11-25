@@ -23,8 +23,10 @@ Open Add-on Manager → PDF Mailer → Preferences and set:
   placeholders are supported: `{pdf}` is replaced with the shell-quoted
   **input** PDF path and `{out}` with the shell-quoted **output** PDF path
   (e.g. `pdf-stamp {pdf} -o {out}`). The file written to `{out}` is attached
-  to the new email; if the command does not write to `{out}`, the input file
-  at `{pdf}` after the command finishes is used instead.
+  to the new email. If the command uses `{out}` but does not create that
+  file, an error is shown instead of silently attaching the original. If the
+  command does not use `{out}` at all, the input file at `{pdf}` after the
+  command finishes (in-place modification) is used instead.
 
 ## How it works
 

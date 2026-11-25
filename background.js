@@ -125,7 +125,7 @@ async function runCommandOnPdf(config, pdfPath) {
   if (!response.data) {
     throw new Error("The command line tool did not return the adapted PDF.");
   }
-  return response.data;
+  return response;
 }
 
 function base64ToPdfFile(b64, fileName) {
@@ -160,8 +160,8 @@ async function processDisplayedMessage(tab) {
 
   const file = await browser.messages.getAttachmentFile(message.id, pdf.partName);
   const pdfPath = await savePdf(file, config, fileName);
-  const adaptedBase64 = await runCommandOnPdf(config, pdfPath);
-  const adaptedFile = base64ToPdfFile(adaptedBase64, fileName);
+  const adapted = await runCommandOnPdf(config, pdfPath);
+  const adaptedFile = base64ToPdfFile(adapted.data, fileName);
 
   await browser.compose.beginNew({
     to: [config.targetAddress.trim()],
@@ -169,7 +169,8 @@ async function processDisplayedMessage(tab) {
     attachments: [{ file: adaptedFile, name: fileName }]
   });
 
-  await notify("PDF Mailer", "New email with the adapted PDF " + fileName + " opened for " + config.targetAddress.trim() + ".");
+  const source = adapted.used && adapted.used !== pdfPath ? " (from " + adapted.used + ")" : "";
+  await notify("PDF Mailer", "New email with the adapted PDF " + fileName + source + " opened for " + config.targetAddress.trim() + ".");
 }
 
 browser.messageDisplayAction.onClicked.addListener(async (tab) => {

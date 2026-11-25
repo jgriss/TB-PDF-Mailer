@@ -58,20 +58,33 @@ def main():
         if not message:
             write_message(sys.stdout.buffer, {"ok": False, "error": "no input message"})
             return
-        command = build_command(str(message.get("command", "")), str(message.get("pdf", "")), str(message.get("out", "")))
+        template = str(message.get("command", ""))
+        pdf_path = str(message.get("pdf", ""))
+        out_path = str(message.get("out", ""))
+        command = build_command(template, pdf_path, out_path)
+        uses_out = "{out}" in template or "%OUT%" in template
+        if out_path and os.path.exists(out_path):
+            os.remove(out_path)  # never attach a stale output from a previous run
         proc = subprocess.run(command, shell=True, capture_output=True, text=True)
-        result_path = message.get("out") if message.get("out") and os.path.exists(message["out"]) else message["pdf"]
-        with open(result_path, "rb") as handle:
-            data = base64.b64encode(handle.read()).decode("ascii")
         if proc.returncode != 0:
             write_message(sys.stdout.buffer, {
                 "ok": False,
                 "error": "command exited with code %d: %s" % (proc.returncode, proc.stderr.strip()),
             })
             return
+        if uses_out and out_path and not os.path.exists(out_path):
+            write_message(sys.stdout.buffer, {
+                "ok": False,
+                "error": "command did not create the output file: " + out_path,
+            })
+            return
+        result_path = out_path if (out_path and os.path.exists(out_path)) else pdf_path
+        with open(result_path, "rb") as handle:
+            data = base64.b64encode(handle.read()).decode("ascii")
         write_message(sys.stdout.buffer, {
             "ok": True,
             "data": data,
+            "used": result_path,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         })
