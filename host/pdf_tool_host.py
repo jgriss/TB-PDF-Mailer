@@ -42,14 +42,17 @@ def write_message(stream, payload):
 
 
 def build_command(template, pdf_path, out_path):
+    """Substitute placeholders if still present (legacy add-on versions send
+    the raw template). Modern add-ons expand the placeholders themselves, so
+    a command without placeholders is executed verbatim - never append paths
+    to it. Returns (command, uses_out)."""
+    uses_out = "{out}" in template or "%OUT%" in template
     quoted_in = shlex.quote(pdf_path)
     quoted_out = shlex.quote(out_path)
     command = (template
                .replace("{out}", quoted_out).replace("%OUT%", quoted_out)
                .replace("{pdf}", quoted_in).replace("%PDF%", quoted_in))
-    if "{pdf}" not in template and "%PDF%" not in template and "{out}" not in template and "%OUT%" not in template:
-        command = command + " " + quoted_in
-    return command
+    return command, uses_out
 
 
 def main():
@@ -61,8 +64,7 @@ def main():
         template = str(message.get("command", ""))
         pdf_path = str(message.get("pdf", ""))
         out_path = str(message.get("out", ""))
-        command = build_command(template, pdf_path, out_path)
-        uses_out = "{out}" in template or "%OUT%" in template
+        command, uses_out = build_command(template, pdf_path, out_path)
         if out_path and os.path.exists(out_path):
             os.remove(out_path)  # never attach a stale output from a previous run
         proc = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -85,6 +87,7 @@ def main():
             "ok": True,
             "data": data,
             "used": result_path,
+            "command": command,
             "stdout": proc.stdout,
             "stderr": proc.stderr,
         })

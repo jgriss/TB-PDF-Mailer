@@ -43,6 +43,9 @@ Open Add-on Manager → PDF Mailer → Preferences and set:
 
 ## Native messaging host setup
 
+> Always re-run `host/install.sh` after updating the extension, so the
+> installed host matches the add-on version.
+
 The easiest way on Linux/macOS is the bundled installer:
 
 ```sh
@@ -66,11 +69,14 @@ Manual setup:
      with the JSON file path as default value.
 
 The host speaks the standard native messaging protocol: it reads
-`{"command": "...", "pdf": "/abs/in.pdf", "out": "/abs/out.pdf"}` from stdin,
-substitutes `{pdf}` and `{out}`, runs the command with the shell, and returns
-`{"ok": true, "data": "<base64 adapted PDF>"}` (or `{"ok": false, "error": ...}`).
-The adapted PDF is read from `{out}` if the command wrote it there, otherwise
-from `{pdf}`.
+`{"command": "...", "pdf": "/abs/in.pdf", "out": "/abs/out.pdf"}` from stdin
+and runs `command` verbatim with the shell. The add-on expands the `{pdf}` /
+`{out}` placeholders itself before sending (shell-quoted), so substitution is
+always in sync with the installed add-on; as a fallback for older add-on
+versions the host still substitutes any placeholders it finds. It returns
+`{"ok": true, "data": "<base64 adapted PDF>", "used": "...", "command": "..."}`
+(or `{"ok": false, "error": ...}`). The adapted PDF is read from `{out}` if the
+command wrote it there, otherwise from `{pdf}`.
 
 ## Install (development)
 

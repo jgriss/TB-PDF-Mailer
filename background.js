@@ -96,15 +96,32 @@ function outputPdfPath(pdfPath) {
   return pdfPath.replace(/\.pdf$/i, "") + "-adapted.pdf";
 }
 
+function shellQuote(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
+
+/* Expand the {pdf} (input) and {out} (output) placeholders here in the
+ * add-on, so the substitution always matches the installed add-on version
+ * and never depends on a stale native messaging host. */
+function expandCommand(template, pdfPath, outPath) {
+  return String(template)
+    .split("{out}").join(shellQuote(outPath))
+    .split("%OUT%").join(shellQuote(outPath))
+    .split("{pdf}").join(shellQuote(pdfPath))
+    .split("%PDF%").join(shellQuote(pdfPath));
+}
+
 async function runCommandOnPdf(config, pdfPath) {
   if (!config.command || !config.command.trim()) {
     throw new Error("No command line tool configured. Open the add-on's options page to set one.");
   }
   const outPath = outputPdfPath(pdfPath);
+  const command = expandCommand(config.command, pdfPath, outPath);
+  console.log("PDF Mailer executing:", command);
   let response;
   try {
     response = await browser.runtime.sendNativeMessage(NATIVE_HOST, {
-      command: config.command,
+      command: command,
       pdf: pdfPath,
       out: outPath
     });
